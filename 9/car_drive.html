@@ -1,0 +1,347 @@
+<html>
+
+<head>
+    <script src="https://threejs.org/build/three.min.js"></script>
+    <script src="https://threejsfundamentals.org/threejs/../3rdparty/dat.gui.min.js"></script>
+    <script src="https://threejsfundamentals.org/threejs/resources/threejs/r105/js/controls/OrbitControls.js"></script>
+    <script src="https://threejsfundamentals.org/threejs/resources/threejs/r105/js/loaders/LoaderSupport.js"></script>
+    <script src="https://threejsfundamentals.org/threejs/resources/threejs/r105/js/loaders/OBJLoader2.js"></script>
+    <script src="https://threejsfundamentals.org/threejs/resources/threejs/r105/js/loaders/FBXLoader.js"></script>
+    <script src="lib/inflate.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+        }
+
+        canvas#c {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="webgl2">
+        <canvas id="c"></canvas>
+    </div>
+
+
+    <script>
+        'use strict';
+
+        var mouse = new THREE.Vector2(),
+            SELECTED;
+        var radius = 100,
+            theta = 0;
+
+        function main() {
+            var container = document.getElementById('webgl2');
+
+            class ColorGUIHelper {
+                constructor(object, prop) {
+                    this.object = object;
+                    this.prop = prop;
+                }
+                get value() {
+                    return `#${this.object[this.prop].getHexString()}`;
+                }
+                set value(hexString) {
+                    this.object[this.prop].set(hexString);
+                }
+            }
+
+            const canvas = document.querySelector("#c");
+            const renderer = new THREE.WebGLRenderer({
+                canvas
+            });
+            renderer.shadowMap.enabled = true;
+
+            const gui = new dat.GUI();
+
+            const fov = 45;
+            const aspect = 2;
+            const near = 0.1;
+            const far = 1000;
+            const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+            const scene = new THREE.Scene();
+
+            const loadManager = new THREE.LoadingManager();
+            const loader = new THREE.TextureLoader(loadManager);
+
+            {
+                //plane
+                const planeSize = 200;
+                const texture = loader.load('assets/parking.jpg')
+                texture.wrapS = THREE.RepeatWrapping;
+                texture.wrapT = THREE.RepeatWrapping;
+                texture.magFilter = THREE.NearestFilter;
+                const repeats = 1;
+                texture.repeat.set(repeats, repeats);
+                const planeGeo = new THREE.PlaneBufferGeometry(planeSize, planeSize);
+                const planeMat = new THREE.MeshPhongMaterial({
+                    map: texture,
+                    side: THREE.DoubleSide
+                });
+                const mesh = new THREE.Mesh(planeGeo, planeMat);
+                mesh.rotation.x = Math.PI * -.5;
+                mesh.receiveShadow = true;
+                scene.add(mesh);
+            }
+
+            {
+                const color = 0xFFFFFF;
+                const intensity = 1;
+                const light = new THREE.DirectionalLight(0xFFFFFF, intensity);
+                light.position.set(0, 20, -5);
+                light.target.position.set(-5, 0, 0);
+                scene.add(light.target);
+                scene.add(light);
+                light.castShadow = true;
+                light.shadow.mapSize.width = 2048;
+                light.shadow.mapSize.height = 2048;
+
+                const d = 50;
+                light.shadow.camera.left = -d;
+                light.shadow.camera.right = d;
+                light.shadow.camera.top = d;
+                light.shadow.camera.bottom = -d;
+                light.shadow.camera.near = 1;
+                light.shadow.camera.far = 50;
+                light.shadow.bias = 0.001;
+
+                const sub_light = new THREE.DirectionalLight(0xFFFFFF, intensity * 0.3);
+                sub_light.position.set(0, 20, 5);
+                sub_light.target.position.set(5, 0, 0);
+                sub_light.castShadow = true;
+                scene.add(sub_light);
+                scene.add(sub_light.target);
+
+                gui.addColor(new ColorGUIHelper(light, 'color'), 'value').name('color');
+                gui.add(light, 'intensity', 0, 2, 0.01);
+                makeXYZGUI(gui, light.position, 'position', updateLight);
+                makeXYZGUI(gui, light.target.position, 'target', updateLight);
+            }
+
+
+            const car_object = window.car_object = new THREE.Object3D();
+            const tire_objects = window.tire_objects = new THREE.Object3D();
+            scene.add(car_object); {
+                var front_tires = []
+                var tires = []
+                const objLoader = new THREE.FBXLoader();
+                objLoader.load('assets/car.fbx', (root) => {
+                    root.rotation.y = Math.PI / 2;
+                    root.traverse((node) => {
+                        //node.scale.set(0.1, 0.1, 0.1);
+
+                        var material = new THREE.MeshToonMaterial({
+                            color: '#cb3c0b',
+                            side: THREE.DoubleSide
+                        });
+                        if (node instanceof THREE.Mesh) {
+                            node.castShadow = true;
+                            //node.receiveShadow = true;
+                            node.material = material;
+                        }
+                        if (node.name.startsWith("wheel_")) {
+                            tires.push(node);
+                            if (node.name.startsWith("wheel_f")) front_tires.push(node);
+                        }
+                    });
+
+                    front_tires.forEach((child) => {
+                        var tire_object = new THREE.Object3D();
+                        tire_object.position.copy(child.position);
+                        child.position.set(0, 0, 0);
+                        tire_object.add(child);
+                        tire_objects.add(tire_object)
+                    })
+
+                    root.add(tire_objects);
+                    car_object.add(root);
+
+                });
+            }
+
+            const camera_follower = new THREE.Object3D();
+            car_object.add(camera_follower);
+
+
+            const raycaster = new THREE.Raycaster();
+            container.addEventListener('mousemove', onDocumentMouseMove, false);
+            container.addEventListener('mousedown', onDocumentMouseDown, false);
+            document.addEventListener("keydown", onKeyBoardDown);
+            document.addEventListener("keyup", onKeyBoardUp);
+
+            function onKeyBoardDown(event) {
+                if(event.keyCode === 38){
+                    options.speed = 1;
+                }
+                else if(event.keyCode === 40){
+                    options.speed = -0.3;
+                }
+                else if(event.keyCode === 37){
+                    options.direction = Math.PI / 12;
+                }
+                else if(event.keyCode === 39){
+                    options.direction = -Math.PI / 12;
+                }
+            }
+
+            function onKeyBoardUp(event) {
+                if(event.keyCode === 38){
+                    options.speed = 0;
+                }
+                else if(event.keyCode === 40){
+                    options.speed = 0;
+                }
+                else if(event.keyCode === 37){
+                    options.direction = 0;
+                }
+                else if(event.keyCode === 39){
+                    options.direction = 0;
+                }
+            }
+/*
+            const curve = new THREE.SplineCurve([
+                new THREE.Vector2(-80, -80),
+                new THREE.Vector2(-80, 80),
+                new THREE.Vector2(80, 80),
+                new THREE.Vector2(80, -80),
+                new THREE.Vector2(-80, -80),
+            ]); {
+                const points = curve.getPoints(50);
+                const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                const material = new THREE.LineBasicMaterial({
+                    color: 0xff0000
+                });
+                const splineObject = new THREE.Line(geometry, material);
+                splineObject.rotation.x = Math.PI * .5;
+                splineObject.position.y = 0.05;
+                scene.add(splineObject);
+            }
+*/
+
+            function makeXYZGUI(gui, vector3, name, onChangeFn) {
+                const folder = gui.addFolder(name);
+                folder.add(vector3, 'x', -10, 10).onChange(onChangeFn);
+                folder.add(vector3, 'z', -10, 10).onChange(onChangeFn);
+                folder.add(vector3, 'y', 0, 10).onChange(onChangeFn);
+                folder.open();
+            }
+
+
+            function onDocumentMouseMove(event) {
+                event.preventDefault();
+                mouse.x = event.offsetX * 2 / container.clientWidth - 1;
+                mouse.y = -event.offsetY * 2 / container.clientHeight + 1;
+            }
+
+            function onDocumentMouseDown(event) {
+                event.preventDefault();
+                if (SELECTED) {
+                    console.log(SELECTED)
+                    SELECTED.currentHex = 0x00ff00 * Math.random();
+                    SELECTED.material.emissive.setHex(SELECTED.currentHex);
+                }
+            }
+
+            class DegRadHelper {
+                constructor(obj, prop) {
+                    this.obj = obj;
+                    this.prop = prop;
+                }
+                get value() {
+                    return THREE.Math.radToDeg(this.obj[this.prop]);
+                }
+                set value(v) {
+                    this.obj[this.prop] = THREE.Math.degToRad(v);
+                }
+            }
+
+            function updateLight() {
+
+            }
+
+            function resizeRendererToDisplaySize(renderer) {
+                const canvas = renderer.domElement;
+                const width = canvas.clientWidth;
+                const height = canvas.clientHeight;
+                const needResize = canvas.width !== width || canvas.height !== height;
+                if (needResize) {
+                    renderer.setSize(width, height, false);
+                }
+                return needResize
+            }
+
+            const car_target = new THREE.Object3D();
+
+            camera_follower.position.set(0, 5, -10);
+            makeXYZGUI(gui, camera_follower.position, 'camera_position', updateLight);
+
+            let options = {
+                speed: 0,
+                direction: 0.0
+            }
+
+            car_object.speed = 0;
+            car_object.direction = 0.0;
+            car_object.add(car_target);
+
+            var helper = new THREE.AxesHelper(0);
+
+            car_target.add(helper);
+            function render(time) {
+                if (resizeRendererToDisplaySize(renderer)) {
+                    const canvas = renderer.domElement;
+                    camera.aspect = canvas.clientWidth / canvas.clientHeight;
+                    camera.updateProjectionMatrix();
+                }
+
+                raycaster.setFromCamera(mouse, camera);
+
+                var intersects = raycaster.intersectObjects(car_object.children, true);
+                if (intersects.length > 0) {
+                    if (SELECTED != intersects[0].object) {
+                        //if ( SELECTED ) SELECTED.material.emissive.setHex( SELECTED.currentHex );
+                        SELECTED = intersects[0].object;
+                        //SELECTED.currentHex = SELECTED.material.emissive.getHex();
+                        //SELECTED.material.emissive.setHex( 0xff0000 );
+                        container.style.cursor = 'pointer';
+                    }
+                } else {
+                    if (SELECTED) {
+                        //SELECTED.material.emissive.setHex( SELECTED.currentHex );
+                        SELECTED = null;
+                        container.style.cursor = 'auto';
+                    }
+                }
+                car_object.speed = (car_object.speed) + (options.speed - car_object.speed) * 0.1;
+                car_object.direction = (car_object.direction) + (options.direction - car_object.direction) * 0.1;
+
+                tires.forEach((child) => {
+                    child.rotation.y += -car_object.speed * 0.2;
+                })
+
+                tire_objects.children.forEach((node) => {
+                    node.rotation.y = car_object.direction;
+                })
+
+                car_target.position.set(0.1 * car_object.speed * Math.sin(car_object.direction), 0, 0.1 * car_object.speed * Math.cos(car_object.direction));
+                car_object.rotation.y += 0.05 * car_object.speed * car_object.direction;
+                car_target.getWorldPosition(car_object.position);
+                //car_object.lookAt(car_target.x, car_target.y, car_target.z);
+
+                camera_follower.getWorldPosition(camera.position)
+                camera.lookAt(car_object.position.x, car_object.position.y, car_object.position.z)
+
+                renderer.render(scene, camera);
+                requestAnimationFrame(render);
+            }
+            requestAnimationFrame(render);
+        }
+        main();
+    </script>
+</body>
+
+</html>

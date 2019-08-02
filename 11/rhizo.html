@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>three.js webgl - buffergeometry - particles</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body{
+				margin: 0;
+			}
+			#container{
+				width: 100%;
+				height: 100%;
+			}
+		</style>
+		<script src="https://threejs.org/build/three.min.js"></script>
+		<script src="https://threejsfundamentals.org/threejs/../3rdparty/dat.gui.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/simplex-noise/2.4.0/simplex-noise.js"></script>
+	</head>
+	<body>
+
+		<div id="container"></div>
+		<script>
+			class ColorGUIHelper {
+				constructor(object, prop) {
+					this.object = object;
+					this.prop = prop;
+				}
+				get value() {
+					return `#${this.object[this.prop].getHexString()}`;
+				}
+				set value(hexString) {
+					this.object[this.prop].set(hexString);
+				}
+			}
+
+			function makeXYZGUI(gui, vector3, name, onChangeFn) {
+				const folder = gui.addFolder(name);
+				folder.add(vector3, 'x', -3000, 3000).onChange(onChangeFn);
+				folder.add(vector3, 'z', -3000, 3000).onChange(onChangeFn);
+				folder.add(vector3, 'y', -3000, 3000).onChange(onChangeFn);
+				folder.open();
+			}
+
+			const gui = new dat.GUI();
+			//gui.addColor(new ColorGUIHelper(light, 'color'), 'value').name('color');
+		</script>
+		<script>
+			"use strict";
+
+			function _classCallCheck(i, e) {
+				if (!(i instanceof e)) throw new TypeError("Cannot call a class as a function")
+			}
+
+			var _createClass = function() {
+			        function i(i, e) {
+			            for (var n = 0; n < e.length; n++) {
+			                var t = e[n];
+			                t.enumerable = t.enumerable || !1, t.configurable = !0, "value" in t && (t.writable = !0), Object.defineProperty(i, t.key, t)
+			            }
+			        }
+			        return function(e, n, t) {
+			            return n && i(e.prototype, n), t && i(e, t), e
+			        }
+			    }();
+			simplexNoise = new SimplexNoise,
+			Node = function() {
+		        function i() {
+		            _classCallCheck(this, i), this.group = new THREE.Group, this.points = new Array, this.positions = null, this.indices = null, this.line = null, this.init()
+		        }
+		        return _createClass(i, [{
+		            key: "init",
+		            value: function() {
+		                var i = 10,
+		                    e = new THREE.BufferGeometry,
+		                    n = i * i * 3;
+		                this.positions = new Float32Array(3 * n * 2), this.indices = new Uint16Array(3 * n);
+		                var t = new THREE.QuadraticBezierCurve3,
+		                    s = UTILS.MATH.random(-50, 50),
+		                    o = UTILS.MATH.random(-50, 50),
+		                    r = UTILS.MATH.random(-50, 50),
+		                    a = UTILS.MATH.random(-50, 50),
+		                    u = UTILS.MATH.random(-50, 50),
+		                    l = UTILS.MATH.random(-50, 50);
+		                t.v0 = new THREE.Vector3(s, o, 0), t.v1 = new THREE.Vector3(r, a, 0), t.v2 = new THREE.Vector3(u, l, 0);
+		                for (var c = 0; c < 2 * i; c++) {
+		                    var h = t.getPoint(c / i),
+		                        d = h.x + 2 * simplexNoise.noise(h.x, h.y),
+		                        p = h.y + 2 * simplexNoise.noise(h.x, h.y),
+		                        f = h.z + 2 * simplexNoise.noise(h.x, h.y);
+		                    this.positions[6 * c] = d, this.positions[6 * c + 1] = p, this.positions[6 * c + 2] = f, this.positions[6 * c + 3] = d + 3 * (c / i * 2), this.positions[6 * c + 4] = p + 3 * (c / i * 2), this.positions[6 * c + 5] = f + 3 * (c / i * 2)
+		                }
+		                for (var T = 0; T < this.positions.length - 2; T++) this.indices[6 * T] = T, this.indices[6 * T + 1] = T + 2, this.indices[6 * T + 2] = T + 1, this.indices[6 * T + 3] = T, this.indices[6 * T + 4] = T + 1, this.indices[6 * T + 5] = T + 2;
+		                e.addAttribute("position", new THREE.BufferAttribute(this.positions, 3).setDynamic(!0)), e.addAttribute("index", new THREE.BufferAttribute(this.indices, 1)), e.computeBoundingSphere();
+		                var v = new THREE.LineBasicMaterial({
+		                    color: 16777215,
+		                    linewidth: 2,
+		                    overdraw: !0
+		                });
+		                this.line = new THREE.Mesh(e, v), this.group.add(this.line)
+		            }
+		        }, {
+		            key: "initParticle",
+		            value: function() {}
+		        }, {
+		            key: "initOption",
+		            value: function() {}
+		        }, {
+		            key: "initPoints",
+		            value: function() {}
+		        }, {
+		            key: "setPoints",
+		            value: function(i) {}
+		        }, {
+		            key: "update",
+		            value: function(i) {
+		                line.geometry.setDrawRange(0, i)
+		            }
+		        }, {
+		            key: "draw",
+		            value: function() {}
+		        }]), i
+		    }();
+
+
+		</script>
+
+		<script>
+			var container;
+			var camera, scene, renderer;
+			var points;
+			init();
+			animate();
+			function init() {
+				container = document.getElementById( 'container' );
+				//
+				camera = new THREE.PerspectiveCamera( 27, window.innerWidth / window.innerHeight, 5, 5000 );
+				camera.position.y = 1050;
+				camera.position.x = 2400;
+				camera.position.z = 2200;
+				camera.lookAt(0,0,0);
+
+				makeXYZGUI(gui, camera.position, 'camera_position', onCameraChange);
+
+				function onCameraChange() {
+					camera.lookAt(0,0,0);
+				}
+
+
+				scene = new THREE.Scene();
+				scene.background = new THREE.Color( 0x050505 );
+				//scene.fog = new THREE.Fog( 0x050505, 2000, 3500 );
+				//
+
+				var width = 120;
+				var depth = 120;
+				var height = 20;
+				var geometry = window.geometry = new THREE.BufferGeometry();
+				var positions = [];
+				var colors = [];
+				var color = new THREE.Color();
+				//var n = 1000, n2 = n / 2; // particles spread in the cube
+				var len_square = 1200;
+				{
+					let geometry = new THREE.PlaneGeometry( len_square, len_square );
+					let material = new THREE.MeshBasicMaterial( {color: 0x050505, side: THREE.DoubleSide} );
+					let plane = new THREE.Mesh( geometry, material );
+					let divisions = 16;
+					let gridHelper = new THREE.GridHelper( len_square, divisions );
+					scene.add( gridHelper );
+					plane.rotation.x = Math.PI / 2;
+					scene.add( plane );
+				}
+
+
+				for(var i = 0; i < height; i ++){
+					for(var j = 0; j < width; j ++){
+						var x = len_square / 2;
+						var y = - (len_square) / width * i - 0.2;
+						var z = (len_square) / width * j - len_square / 2;
+						positions.push(x, y, z);
+						color.setRGB(100, 100, 100);
+						colors.push(color.r, color.g, color.b);
+
+						positions.push(z + len_square / width, y, x);
+						colors.push(color.r, color.g, color.b);
+
+						positions.push(z, y, -x);
+						colors.push(color.r, color.g, color.b);
+
+						positions.push(- x, y, z + len_square / width);
+						colors.push(color.r, color.g, color.b);
+
+					}
+
+
+
+				}
+
+				geometry.addAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
+				geometry.addAttribute( 'color', new THREE.Float32BufferAttribute( colors, 3 ) );
+				geometry.computeBoundingSphere();
+				//
+				var material = new THREE.PointsMaterial( { size: 15, vertexColors: THREE.VertexColors } );
+				points = new THREE.Points( geometry, material );
+				scene.add( points );
+				//
+				renderer = new THREE.WebGLRenderer();
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				container.appendChild( renderer.domElement );
+				//
+				//
+				window.addEventListener( 'resize', onWindowResize, false );
+			}
+			function onWindowResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+			}
+			//
+			function animate() {
+				requestAnimationFrame( animate );
+				render();
+			}
+			function render() {
+				var time = Date.now() * 0.001;
+				//points.rotation.x = time * 0.25;
+				//points.rotation.y = time * 0.5;
+				renderer.render( scene, camera );
+			}
+
+
+		</script>
+
+	</body>
+</html>
