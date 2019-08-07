@@ -13,13 +13,24 @@
 				height: 100%;
 			}
 		</style>
-		<script src="https://threejs.org/build/three.min.js"></script>
-		<script src="https://threejsfundamentals.org/threejs/../3rdparty/dat.gui.min.js"></script>
-		<script src="https://cdnjs.cloudflare.com/ajax/libs/simplex-noise/2.4.0/simplex-noise.js"></script>
+		<script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+	    <script src="three.js"></script>
+	    <script src="https://cdnjs.cloudflare.com/ajax/libs/simplex-noise/2.4.0/simplex-noise.js"></script>
+	    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inview/1.0.0/jquery.inview.min.js"></script>
+	    <script src="modernizer.js"></script>
+		<script src="scripts/libs/shaders/shader.js"></script>
+		<script src="centi.js"></script>
 	</head>
-	<body>
+	<body id="page-top">
+      <div id="container">
+        <div id="mainimage">
+          <div id="main-visual"></div>
+          <div id="canvas-cover"></div>
+        </div>
+    </div>
 
-		<div id="container"></div>
+
+
 		<script>
 			class ColorGUIHelper {
 				constructor(object, prop) {
@@ -42,7 +53,7 @@
 				folder.open();
 			}
 
-			const gui = new dat.GUI();
+
 			//gui.addColor(new ColorGUIHelper(light, 'color'), 'value').name('color');
 		</script>
 
@@ -51,407 +62,625 @@
 			var container;
 			var camera, scene, renderer;
 			var points;
-			animate();
-			function init() {
-				container = document.getElementById( 'container' );
-				//
-				camera = new THREE.PerspectiveCamera( 27, window.innerWidth / window.innerHeight, 5, 5000 );
-				camera.position.y = 1050;
-				camera.position.x = 2400;
-				camera.position.z = 2200;
-				camera.lookAt(0,0,0);
+			//animate();
 
-				makeXYZGUI(gui, camera.position, 'camera_position', onCameraChange);
-
-				function onCameraChange() {
-					camera.lookAt(0,0,0);
+			function shuffle(t) {
+			    for (var e = t.length, s, i; e;) i = Math.floor(Math.random() * e--), s = t[e], t[e] = t[i], t[i] = s;
+			    return t
+			}
+			var ct = ct || new Centi;
+			var RZM = RZM || {};
+			RZM.PATH = "/";
+			RZM.SrcMap = function(scene, datas, console_dom){
+				this.console_dom = console_dom;
+				this.datas = datas;
+				this.scene = scene;
+				this.word_counting = {};
+				this.income_cnt = 0;
+				this.ploted_cnt = 0;
+				this.fulled = false;
+				this.NUM = 32768;
+				{
+					//points
+					const geometry = new THREE.Geometry;
+					let position_temp = new THREE.Vector3();
+					for (var i = 0; i < this.NUM; i++){
+						switch(i % 4) {
+							case 0:
+								position_temp.set(100, 0, parseInt(100 * ct.rnd(-1, 1)));
+								break;
+							case 1:
+								position_temp.set(-100, 0, parseInt(100 * ct.rnd(-1, 1)));
+								break;
+							case 2:
+								position_temp.set(parseInt(100 * ct.rnd(-1, 1)), 0, 100);
+								break;
+							case 3:
+								position_temp.set(parseInt(100 * ct.rnd(-1, 1)), 0, -100);
+								break;
+						}
+						position_temp.y = ct.rnd(1) * ct.rnd(1) * ct.rnd(1) * -50;
+						geometry.vertices.push(new THREE.Vector3(position_temp.x, position_temp.y, position_temp.z));
+					}
+					const loader = new THREE.TextureLoader();
+					const texture = loader.load(RZM.PATH + "images/index/circle.png");
+					const material = new THREE.PointsMaterial({
+						size: 4,
+						sizeAttenuation: false,
+						map: texture,
+						alphaTest: false,
+						depthTest: true,
+						transparent: true,
+						opacity : .3,
+						blending: THREE.AdditiveBlending
+					});
+					const points = new THREE.Points(geometry, material);
+					this.particles = window.particles = points;
+					this.scene.add(this.particles);
 				}
 
+				var temp_box_on = true;
+				if(temp_box_on){
+					//temporary_box
+					const geometry = new THREE.CubeGeometry(200, 50, 200);
+					const material = new THREE.MeshBasicMaterial({
+						color: 0xffffff
+					});
+					const cube = new THREE.Mesh(geometry, material);
+					cube.position.y = 25;
+					const helper = new THREE.EdgesHelper(cube, 0xffffff);
+					helper.material.linewidth = 1;
+					helper.material.opacity = .5;
+					helper.material.transparent = true;
+					this.scene.add(helper);
+					helper.geometry.translate(0, -25, 0);
+				}
 
-				scene = new THREE.Scene();
-				scene.background = new THREE.Color( 0x050505 );
-				//scene.fog = new THREE.Fog( 0x050505, 2000, 3500 );
-				//
-				RZM = RZM || {};
-				RZM.PATH = "/";
-				RZM.SrcMap = function(scene, datas, console_dom){
-					this.console_dom = console_dom;
-					this.datas = datas;
-					this.scene = scene;
-					this.word_counting = {};
-					this.income_cnt = 0;
-					this.ploted_cnt = 0;
-					this.fulled = false;
-					this.NUM = 32768;
-					{
-						//points
-						const geometry = new THREE.Geometry;
-						let position_temp = new THREE.Vector3();
-						for (var i = 0; i < this.NUM; i++){
-							switch(i % 4) {
-								case 0:
-									position_temp.set(100, 0, Math.floor(100 * (Math.random() * 2 - 1)));
-									break;
-								case 1:
-									position_temp.set(-100, 0, Math.floor(100 * (Math.random() * 2 - 1)));
-									break;
-								case 2:
-									position_temp.set(Math.floor(100 * (Math.random() * 2 - 1)), 0, 100);
-									break;
-								case 3:
-									position_temp.set(Math.floor(100 * (Math.random() * 2 - 1)), 0, -100);
-									break;
-							}
-							position_temp.y = Math.random() * Math.random() * Math.random() * -50;
-							geometry.vertices.push(position_temp);
-						}
-						const loader = new THREE.TextureLoader(loadManager);
-						const texture = loader.load(RZM.PATH + "images/index/circle.png");
-						const material = new THREE.PointsMaterial({
-							size: 4,
-							sizeAttenuation: false,
+				{
+					//origial source code used function for this.
+					// ! function() { ... }() this format.
+					//top
+					this.canvas_size = 512;
+					let plane_canvas = document.createElement("canvas");
+					plane_canvas.width = plane_canvas.height = this.canvas_size;
+					let plane_context = plane_canvas.getContext("2d");
+					this.context = plane_context;
+					this.canvas = plane_canvas;
+					let plane_canvas_texture = new THREE.Texture(this.canvas);
+					plane_canvas_texture.needsUpdate = true;
+
+					const material = new THREE.MeshBasicMaterial({
+						map: plane_canvas_texture,
+						color: 0x000000,
+						fog: false,
+						opacity: 1,
+						transparent: true,
+						depthTest: true,
+						alphaTest: false,
+						blending: THREE.AdditiveBlending,
+						side: THREE.DoubleSide
+					});
+					const geometry = new THREE.PlaneGeometry(200, 200, 1, 1);
+					const mesh = new THREE.Mesh(geometry, material);
+					mesh.rotation.x = -Math.PI / 2;
+					this.scene.add(mesh);
+					this.top_texture = plane_canvas_texture;
+					ct.ctx = this.context;
+					ct.canvas = this.canvas;
+					this.texture = plane_canvas_texture;
+				}
+
+				{
+					//bottom
+					let canvas_size = 1024;
+					let chart_canvas = document.createElement("canvas");
+					chart_canvas.width = chart_canvas.height = canvas_size;
+					let chart_context = chart_canvas.getContext("2d");
+					this.chart_canvas = chart_canvas;
+					chart_context.font = "64pt Arial";
+					chart_context.fillStyle = "#ffffff";
+					chart_context.fillText("Nature of Rhizomatiks", 0, 128);
+					let chart_texture = new THREE.Texture(this.chart_canvas);
+					chart_texture.needsUpdate = true;
+					this.chart_texture = chart_texture;
+					const material = new THREE.MeshBasicMaterial({
+						map: chart_texture,
+						color: 0xffffff,
+						fog: false,
+						opacity:1 ,
+						transparent: true,
+						depthTest: false,
+						alphaTest: false,
+						blending: THREE.AdditiveBlending,
+						side: THREE.FrontSide
+					});
+					const geometry = new THREE.PlaneGeometry(200, 200, 1, 1);
+					const mesh = new THREE.Mesh(geometry, material);
+					mesh.position.y = -50;
+					mesh.rotation.x = Math.PI / 2;
+					mesh.rotation.z = Math.PI;
+					this.scene.add(mesh);
+				}
+
+				this.spheres = [];
+				this.lines = [];
+				this.word_sprites = [];
+				this.word_canvas = [];
+				{
+					for (var i  = 0; i < 20; i++){
+						let text = this.createText("test");
+						let texture = new THREE.Texture(text);
+						texture.needsUpdate = true;
+						let material = new THREE.SpriteMaterial({
 							map: texture,
-							alphaTest: false,
-							depthTest: true,
-							transparent: true,
-							opaicty : .3,
-							blending: THREE.AdditiveBlending
-						});
-						const points = new THREE.Points(geometry, material);
-						this.particles = points;
-					}
-
-					var temp_box_on = true;
-					if(temp_box){
-						//temporary_box
-						const geometry = new THREE.CubeGeometry(200, 50, 200);
-						const material = new THREE.MeshBasicMaterial({
-							color: 0xffffff;
-						});
-						const cube = new THREE.Mesh(geometry, material);
-						cube.position.y = 25;
-						const helper = new THREE.EdgesHelper(cube, 0xffffff);
-						helper.material.linewidth = 1;
-						helper.material.opacity = .5;
-						helper.maetrial.transparent = true;
-						this.scene.add(helper);
-						helper.geometry.translate(0, 25, 0);
-					}
-
-					{
-						//origial source code used function for this.
-						// ! function() { ... }() this format.
-						//top
-						this.canvas_size = 512;
-						let plane_canvas = document.createElement("canvas");
-						canvas.width = canvas.height = this.canvas_size;
-						let plane_context = canvas.getContext("2d");
-						this.context = palne_context;
-						this.canvas = plane_canvas;
-						let plane_canvas_texture = new THREE.Texture(this.canvas);
-						plane_canvas_texture.needsUpdate = true;
-
-						const material = new THREE.MeshBasicMaterial({
-							map: plane_canvas_texture,
-							color: 0x000000;
-							fog: false,
+							color: 0xffffff,
+							fog: true,
 							opacity: 1,
 							transparent: true,
 							depthTest: true,
 							alphaTest: false,
-							blending: THREE.AdditiveBlending,
-							side: THREE.DoubleSide
+							blending: THREE.NormalBlending
 						});
-						const geometry = new THREE.PlaneGeometry(200, 200, 1, 1);
-						const mesh = new THREE.Mesh(geometry, material);
-						mesh.rotation.x = -Math.PI / 2;
-						this.scene.add(mesh);
-						this.top_texture = plane_canvas_texture;
+						let sprite = new THREE.Sprite(material);
+						let scale = i ? 50 : 20;
+						sprite.scale.set(scale, scale, scale);
+						this.word_canvas.push(text);
+						this.word_sprites.push(sprite);
 					}
+					this.next_step_index = -1;
+					this.step_hist = [];
+					this.sphere_asset = {
+						geom: new THREE.SphereGeometry(.3, 10, 10),
+						material: new THREE.MeshBasicMaterial({
+							color: 0xffffff
+						}),
+						red_material: new THREE.MeshBasicMaterial({
+							color: 0xff2200
+						})
+					};
+					this.color_map = [16734221, 16736769, 16742913, 16749826, 16756739, 16763396, 16769030, 16773129, 15792908, 14351885, 12713232, 10943765, 9239839, 7798063, 6552905, 5176682, 3800464, 2555318, 1441241, 1375734];
+					let plane_helper = new THREE.GridHelper(100, 20);
+					plane_helper.material.color = new THREE.Color(0x252010);
+					plane_helper.material.blending = THREE.AdditiveBlending;
+					this.scene.add(plane_helper);
 
-					{
-						//bottom
-						let canvas_size = 1024;
-						let chart_canvas = document.createElement("canvas");
-						chart_canvas.width = chart_canvas.height = canvas_size;
-						let chart_context = chart_canvas.getContext("2d");
-						this.chart_canvas = chart_canvas;
-						chart_context.font = "64pt Arial";
-						chart_context.fillStyle = "#ffffff";
-						chart_context.fillText("Nature of Rhizomatiks", 0, 128);
-						let chart_texture = new THREE.Texture(this.chart_canvas);
-						chart_texture.needsUpdate = true;
-						this.chart_texture = chart_texture;
-						const material = new THREE.MeshBasicMaterial({
-							map: chart_texture,
-							color: 0xffffff,
-							fog: false,
-							opacity:1 ,
-							transparent: true,
-							depthTest: false,
-							alphaTest: false,
-							blending: THREE.AdditiveBlending,
-							side: THREE.FrontSide
-						});
-						const geometry = new THREE.PlaneGeometry(200, 200, 1, 1);
-						const mesh = new THREE.Mesh(geometry, material);
-						mesh.position.y = -50;
-						mesh.rotation.x = Math.PI / 2;
-						emsh.rotation.z = Math.PI;
-						this.scene.add(mesh);
+				}
+			}
+
+			RZM.SrcMap.prototype.setConsoleDom = function(console_dom) {
+				this.console_dom = console_dom;
+			};
+			RZM.SrcMap.prototype.toCanvasPosition = function(input) {
+				return ct.zmap(input, -100, 100, 0, this.canvas_size); //-100~100 -> 0~canvas_size
+			};
+			RZM.SrcMap.prototype.createText = function(input) {
+				var canvas = document.createElement("canvas");
+				var size = 128;
+				var font_size = 10;
+				canvas.width = size;
+				canvas.height = size;
+				var ctx = canvas.getContext("2d");
+				ctx.font = size + "pt Helvetica, Arial";
+				ctx.fillStyle = "#ffffff";
+				ctx.fillText(input, 0, 12);
+				return canvas;
+			};
+			RZM.SrcMap.prototype.drawText = function(canvas, text){
+				var size = 12;
+				var ctx = canvas.getContext("2d");
+				ctx.clearRect(0, 0, 128, 128);
+				ctx.font = size + "pt Helvetica, Arial";
+				ctx.fillStyle = "#ffffff";
+				ctx.textAlign = "center";
+				var l_break = 16
+				if (text.length > l_break) {
+					var _text = []
+					for (var i = 0; i < text.length; i += l_break){
+						_text.push(text.substr(i, i + l_break));
 					}
-					this.spheres = [];
-					this.lines = [];
-					this.word_sprites = [];
-					this.word_canvas = [];
-					{
-						for (var i  = 0; i < 20; i++){
-							let text = this.createText("test");
-							let texture = new THREE.Texture(x);
-							texture.needsUpdate = true;
-							let material = new THREE.SpriteMaterial({
-								map: texture,
-								color: 0xffffff,
-								fog, true,
-								opacity: 1,
-								transparent: true,
-								depthTest: true,
-								alphaTest: false,
-								blending: THREE.NormalBlending
-							});
-							let sprite = new THREE.Sprite(material);
-							let scale = w ? 50 : 20;
-							sprite.scale.set(scale, scale, scale);
-							this.word_canvas.push(text);
-							this.word_sprites.push(sprite);
+					for(var i = 0; i < _text.length; i++){
+						ctx.fillText(_text[i], 64, 59 + 16 * i - 16 * (_text.length - 1), 128);
+					}
+				} else ctx.fillText(text, 64, 59, 128);
+				return canvas;
+			};
+			RZM.SrcMap.prototype.drawHist = function(canvas, text, shuffled) {
+			   if (shuffled.length && this.console_dom) {
+				   var result = "";
+				   for (n = 0, i = shuffled.length - 1; i >= 0; i--) {
+					   var o = this.datas[shuffled[i]].word;
+					   if (result += n == 0 ? "<span style='color:#ff4437'>" + o + "</span><br />" : o + "<br />", n++, n > 20) break
+				   }
+				   this.console_dom.innerHTML = result
+			   }
+		   };
+		   RZM.SrcMap.prototype.drawChart = function(canvas, texture, s) {
+			   var size = 24;
+			   var line_height = 32;
+			   var ctx = canvas.getContext("2d");
+			   ctx.clearRect(0, 0, 1024, 1024);
+			   ctx.font = size + "pt Helvetica, Arial";
+			   ctx.fillStyle = "#e21010";
+			   ctx.textAlign = "left";
+			   var keys = Object.keys(s);
+			   var _temp_words = [];
+			   for (var c = keys.length - 1; c >= 0; c--) {
+				   var word = keys[c];
+				   _temp_words.push({
+					   word: word,
+					   val: s[keys[c]]
+				   })
+			   };
+			   _temp_words.sort(function(a, b) {
+				   return b.val - a.val;
+			   });
+			   for (var i = 0; i < _temp_words.length; i++) {
+				   var _text = "[ " + _temp_words[i].val + " ] " + _temp_words[i].word;
+				   ctx.fillText(_text, 2, 25 + line_height * i);
+				   ctx.fillStyle = "#e5e5e5";
+				   if (i * line_height > 1024) break;
+			   }
+			   texture.needsUpdate = true
+		   };
+
+		   RZM.SrcMap.prototype.modifyHeight = function(t) {
+			if (this.fulled && !(0 > t || t >= this.datas.length)) {
+				var e = this.datas[t];
+				if (!e.modified_y) {
+					var s = ct.vec2(e.pos.x, e.pos.z);
+					var i = ct.vec2(0, 0);
+					for (var n = 0; n < this.datas.length; n++)
+						if (t != n) {
+							var a = this.datas[n];
+							i.x = a.pos.x, i.y = a.pos.z;
+							var o = ct.dist(s, i);
+							1 > o && (e.pos.y += 2 * (1 - ct.zmap(o, 0, 1, 0, 1)))
 						}
-						this.next_step_index = -1;
-						this.step_hist = [];
-						this.sphere_asset = {
-							geom: new THREE.SphereGeometry(.3, 10, 10),
-							material: new THREE.MeshBasicMaterial({
-								color: 0xffffff
-							}),
-							red_material: new THREE.MeshBasicMaterial({
-								color: 0xff2200
-							})
-						};
-						this.color_map = [16734221, 16736769, 16742913, 16749826, 16756739, 16763396, 16769030, 16773129, 15792908, 14351885, 12713232, 10943765, 9239839, 7798063, 6552905, 5176682, 3800464, 2555318, 1441241, 1375734];
-						let plane_helper = new THREE.GridHelper(100, 20);
-						plane_helper.material.color = new THREE.Color(0x252010);
-						plane_helper.maetrial.blending = THREE.AdditiveBlending;
-						this.scene.add(plane_helper);
-						this.scene.add(this.particles); //why here?
-
+						e.modified_y = !0
+					}
+					if (-1 != e.ploted_index) {
+						var r = this.particles.geometry;
+						r.vertices[e.ploted_index].x = e.pos.x;
+						r.vertices[e.ploted_index].y = e.pos.y;
+						r.vertices[e.ploted_index].z = e.pos.z;
+						r.verticesNeedUpdate = true;
 					}
 				}
+			};
 
-				RZM.SrcMap.prototype.setConsoleDom = function(console_dom) {
-					this.console_dom = console_dom;
-				};
-				RZM.SrcMap.prototype.toCanvasPosition = function(input) {
-					return ct.zmap(input, -100, 100, 0, this.canvas_size); //-100~100 -> 0~canvas_size
-				};
-				RZM.SrcMap.prototype.createText = function(input) {
-					var canvas = document.createElement("canvas");
-					var size = 128;
-					var font_size = 10;
-					canvas.width = size;
-					canvas.height = size;
-					var ctx = canvas.getContext("2d");
-					ctx.font = size + "pt Helvetica, Arial";
-					ctx.fillStyle = "#ffffff";
-					ctx.fillText(input, 0, 12);
-					return canvas;
-				};
-				RZM.SrcMap.prototype.drawText = function(canvas, text){
-					var size = 12;
-					var ctx = canvas.getContext("2d");
-					ctx.clearRect(0, 0, 128, 128);
-					ctx.font = size + "pt Helvetica, Arial";
-					ctx.fillStyle = "#ffffff";
-					ctx.textAlign = "center";
-					var l_break = 16
-					if (text.length > l_break) {
-						var _text = []
-						for (var i = 0; i < text.length; i += l_break){
-							_text.push(text.substr(i, i + l_break));
+			RZM.SrcMap.prototype.checkLoop = function() {
+				if (this.step_hist.length)
+					for (var t = this.step_hist.length - 1; t >= 0; t--) {
+						var s = 0;
+						for (var i = 0; i < this.step_hist.length; i++) t != i && this.step_hist[t] == this.step_hist[i] && s++;
+						if (this.step_hist.length > 40 && s > .1 * this.step_hist.length) {
+							this.next_step_index = -1, this.step_hist = [];
+							break
 						}
-						for(var i = 0; i < _text.length; i++){
-							ctx.fillText(_text[i], 64, 59 + 16 * i - 16 * (_text.length - 1), 128);
-						}
-					} else ctx.fillText(text, 64, 59, 128);
-					return canvas;
-				};
-				RZM.SrcMap.prototype.drawHist = function(canvas, text, shuffled) {
-		           if (shuffled.length && this.console_dom) {
-					   var result = "";
-		               for (n = 0, i = shuffled.length - 1; i >= 0; i--) {
-		                   var o = this.datas[shuffled[i]].word;
-		                   if (result += n == 0 ? "<span style='color:#ff4437'>" + o + "</span><br />" : o + "<br />", n++, n > 20) break
-		               }
-		               this.console_dom.innerHTML = result
-		           }
-		       };
-			   RZM.SrcMap.prototype.drawChart = function(canvas, texture, s) {
-		           var size = 24;
-		           var line_height = 32;
-		           var ctx = canvas.getContext("2d");
-		           ctx.clearRect(0, 0, 1024, 1024);
-				   ctx.font = size + "pt Helvetica, Arial";
-				   ctx.fillStyle = "#e21010";
-				   ctx.textAlign = "left";
-				   var keys = Object.keys(s);
-				   var _temp_words = [];
-		           for (var c = keys.length - 1; c >= 0; c--) {
-		               var word = keys[c];
-		               _temp_words.push({
-		                   word: word,
-		                   val: s[keys[c]]
-		               })
-		           };
-		           _temp_words.sort(function(a, b) {
-		               return b.val - a.val;
-		           });
-		           for (var i = 0; i < _temp_words.length; i++) {
-		               var _text = "[ " + _temp_words[i].val + " ] " + _temp_words[i].word;
-					   ctx.fillText(_text, 2, 25 + line_height * i);
-					   ctx.fillStyle = "#e5e5e5";
-		               if (i * line_height > 1024) break;
-		           }
-		           texture.needsUpdate = true
-		       };
+					}
+			}
 
-			   RZM.SrcMap.prototype.modifyHeight = function(t) {
-				   //Don't know what this exactly do.
-			   	if (this.fulled && !(0 > t || t >= this.datas.length)) {
-			   		var e = this.datas[t];
-			   		if (!e.modified_y) {
-			   			for (var s = ct.vec2(e.pos.x, e.pos.z), i = ct.vec2(0, 0), n = 0; n < this.datas.length; n++)
-			   				if (t != n) {
-			   					var a = this.datas[n];
-			   					i.x = a.pos.x, i.y = a.pos.z;
-			   					var o = ct.dist(s, i);
-			   					1 > o && (e.pos.y += 2 * (1 - ct.zmap(o, 0, 1, 0, 1)))
-			   				}
-							e.modified_y = !0
-			   			}
-				   		if (-1 != e.ploted_index) {
-				   			var r = this.particles.geometry;
-				   			r.vertices[e.ploted_index].x = e.pos.x, r.vertices[e.ploted_index].y = e.pos.y, r.vertices[e.ploted_index].z = e.pos.z, r.verticesNeedUpdate = !0
-				   		}
-			   		}
-				};
+			RZM.SrcMap.prototype.update = function() {
+			   if (ct.c % 30 < 15 && this.datas.length > 0) {
+				   var t;
+				   for (var i = 0; i < this.lines.length; i++){
+					   this.lines[i].parent.remove(this.lines[i]);
+					   this.lines[i].geometry.dispose();
+					   this.lines[i].material.dispose();
+				   }
+				   this.lines = [];
+				   for (var i = 0; i < this.word_sprites.length; i++){
+					  this.word_sprites[i].parent && this.word_sprites[i].parent.remove(this.word_sprites[i]);
+				   }
+				   if(this.next_step_index > this.datas.length - 1) this.next_step_index = -1;
+				   var _temp_step = this.next_step_index == -1 ? parseInt(ct.rnd(this.datas.length)) : this.next_step_index;
+				   this.step_hist.push(_temp_step);
+				   this.drawHist(this.top_canvas, this.top_texture, this.step_hist);
+				   var _temp_data = this.datas[_temp_step];
+				   ! this.word_counting[_temp_data.word] ? this.word_counting[_temp_data.word] = 1 : this.word_counting[_temp_data.word]++;
+				   this.drawChart(this.chart_canvas, this.chart_texture, this.word_counting);
+				   var _near = _temp_data.nears;
+				   _temp_data.ploted || (_temp_data.ploted = true, this.plot(_temp_data));
+				   for (var e = 0; e < this.spheres.length; e++){
+					   this.spheres[e].visible = _near.length > e;
+				   }
+				   var a = [];
+				   for (e = 0; e < _near.length; e++) { // preset to _near.length == 20
+					   if (void 0 == _near[e].target) {
+						   _near[e].target = -1;
+						   for (var o = 0; o < this.datas.length; o++)
+							   if (this.datas[o].word == _near[e].word) {
+								   _near[e].target = o;
+								   break
+							   }
+					   }
+					   var _target = _near[e].target;
+					   if (-1 != _target) {
+						   e > 0 && a.push(_target);
+						   var d = this.datas[_target];
+						   this.drawText(this.word_canvas[e], d.word);
+						   this.word_sprites[e].material.map.needsUpdate = true;
+						   this.word_sprites[e].position.set(d.pos.x, d.pos.y, d.pos.z);
+						   this.scene.add(this.word_sprites[e]);
 
-				RZM.SrcMap.prototype.checkLoop = function() {
-					if (this.step_hist.length)
-						for (var t = this.step_hist.length - 1; t >= 0; t--) {
-							var s = 0;
-							for (var i = 0; i < this.step_hist.length; i++) t != i && this.step_hist[t] == this.step_hist[i] && s++;
-							if (this.step_hist.length > 40 && s > .1 * this.step_hist.length) {
-								this.next_step_index = -1, this.step_hist = [];
-								break
-							}
-						}
+						   if (this.spheres.length < e + 1) {
+							   var c = new THREE.Mesh(this.sphere_asset.geom, 0 == e ? this.sphere_asset.red_material : this.sphere_asset.material);
+							   c.position.x = d.pos.x, c.position.y = d.pos.y, c.position.z = d.pos.z, this.scene.add(c), this.spheres.push(c)
+						   } else {
+							   var c = this.spheres[e];
+							   c.position.x = d.pos.x, c.position.y = d.pos.y, c.position.z = d.pos.z
+						   }
+						   t = this.getLine({
+							   x: _temp_data.pos.x,
+							   y: 0,
+							   z: _temp_data.pos.z
+						   }, {
+							   x: d.pos.x,
+							   y: 0,
+							   z: d.pos.z
+						   }, this.color_map[e % this.color_map.length]);
+						   this.scene.add(t);
+						   this.lines.push(t);
+						   t = this.getLine({
+							   x: d.pos.x,
+							   y: 0,
+							   z: d.pos.z
+						   }, d.pos, this.color_map[e % this.color_map.length]);
+						   this.scene.add(t);
+						   this.lines.push(t);
+						   ct.bm(3);
+						   ct.col(255, 1);
+						   ct.line(this.toCanvasPosition(_temp_data.pos.x),
+						   			this.toCanvasPosition(_temp_data.pos.z),
+						   			this.toCanvasPosition(d.pos.x),
+						   			this.toCanvasPosition(d.pos.z));
+						   d.ploted || (d.ploted = !0, this.plot(d));
+						   this.modifyHeight(_target)
+					   }
+				   }
+				   this.texture.needsUpdate = true;
+				   if (a.length > 0) {
+					   this.next_step_index = a[parseInt(ct.rnd(a.length))];
+					   var d = this.datas[this.next_step_index];
+					   ct.bm(3);
+					   ct.col(255, 2);
+					   ct.line(this.toCanvasPosition(_temp_data.pos.x), this.toCanvasPosition(_temp_data.pos.z), this.toCanvasPosition(d.pos.x), this.toCanvasPosition(d.pos.z));
+				   }
+				   this.checkLoop()
+			   }
+		   };
+		   RZM.SrcMap.prototype.getLine = function(from, to, color){
+			   var geometry = new THREE.Geometry;
+			   geometry.vertices.push(new THREE.Vector3(from.x, from.y, from.z));
+			   geometry.vertices.push(new THREE.Vector3(to.x, to.y, to.z));
+			   var material = new THREE.LineBasicMaterial({
+				   color: color
+			   })
+			   var line = new THREE.Line(geometry, material);
+			   return line;
+		   };
+		   RZM.SrcMap.prototype.checkData = function(data) {
+				this.fulled || void 0 != data.nears && (this.income_cnt++, this.income_cnt > this.NUM - 1 && (this.fulled = true))
+				//false || true -> this.income_cnt++ / this.income_cnt > this.NUM -1 -> this.fulled = true
+		   };
+		   RZM.SrcMap.prototype.plot = function(data) {
+			   if (!(this.ploted_cnt > this.NUM - 1)) {
+				   var e = this.particles.geometry;
+				   data.ploted = true;
+				   data.ploted_index = this.ploted_cnt;
+				   e.vertices[this.ploted_cnt].x = data.pos.x;
+				   e.vertices[this.ploted_cnt].y = data.pos.y;
+				   e.vertices[this.ploted_cnt].z = data.pos.z;
+				   e.verticesNeedUpdate = true;
+				   this.ploted_cnt++
+				   //overwrite the position of particle
+			   }
+		   };
+
+		   RZM.SrcMapData = function() {
+			   this.NUM = 101; // num of JSON FILE
+			   this.PREFIX = RZM.PATH + "scripts/libs/rzm_src/";
+			   this.EXT = ".json";
+			   this.loaded_cnt = 0;
+			   this.random_index_arr = [];
+			   this.random_index_arr = function(t) {
+				   e = [20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20]
+				   return shuffle(e)
+			   }(this.NUM);
+			   this.datas = [];
+		   };
+		   RZM.SrcMapData.prototype.loadNext = function(t) {
+			   if (this.loaded_cnt > this.NUM - 1) return false;
+			   var file_path = this.PREFIX + this.random_index_arr[this.loaded_cnt] + this.EXT;
+			   var request = new XMLHttpRequest;
+			   var that = this;
+			   request.open("GET", file_path, true);
+			   request.onload = function(e) {
+				   if (4 === request.readyState) {
+					   if (200 === request.status) {
+						   this.loaded_cnt++;
+						   var n = JSON.parse(request.responseText);
+						   var a = n.length;
+
+						   for (var o = 0; o < n.length; o++){
+							  n[o].pos.x = ct.zmap(n[o].pos.x, 0, 1, -100, 100);
+							  n[o].pos.z = ct.zmap(n[o].pos.y, 0, 1, -100, 100);
+							  n[o].pos.y = 0;
+							  n[o].ploted = false;
+							  n[o].ploted_index = -1;
+							  n[o].modified_y = false;
+							  void 0 != n[o].nears && that.datas.push(n[o]);
+							  t(n[o], o == a - 1)
+						   }
+					   }
+				   }
+				   else console.error(request.statusText)
+			   };
+			   request.send(null);
+			   return true
+		   };
+		   var ct = ct || new Centi;
+		   var RzmSrcMap = RzmSrcMap || {};
+
+			! function () {
+				function t(path, callback) {
+					//opening shader
+			        var request = new XMLHttpRequest;
+			        request.open("GET", path);
+					request.onload = function() {
+			            callback && callback(this.responseText)
+			        };
+					request.send(null)
+			    };
+
+				var h, l, f, u, v, E, m, w, x = new THREE.Clock;
+
+				function e() {
+			        l = new THREE.Scene;
+					R = new THREE.Object3D;
+					l.add(R),
+		            function() {
+		                f = new THREE.PerspectiveCamera(67, window.innerWidth / window.innerHeight, .01, 1e3);
+						f.position.z = 0;
+						f.position.y = 1300;
+						ct.tween(f.position).to({
+		                    x: 0,
+		                    y: 100,
+		                    z: 190
+		                }, 5e3).easing(ct.SineInOut).onComplete(function() {
+		                    w.enabled = true
+		                }.bind(this)).start()
+		            }(),
+
+		            function() {
+		                u = new THREE.WebGLRenderer({
+		                    antialias: !0,
+		                    alpha: !0
+		                });
+						u.setSize(window.innerWidth, window.innerHeight);
+						u.setClearColor(0, 1);
+						u.autoClear = true;
+						u.sortObjects = false;
+						w = new THREE.TrackballControls(f, u.domElement);
+						w.staticMoving = true;
+						w.enabled = false;
+		            }(),
+
+		            function() {
+		                v = document.createElement("div");
+						E = document.createElement("div");
+						v.appendChild(u.domElement);
+						document.getElementById("main-visual").appendChild(v);
+						s()
+		            }();
+					T = new THREE.EffectComposer(u);
+					T.addPass(new THREE.RenderPass(l, f));
+					t(RZM.PATH + "scripts/libs/shaders/pass.vert", function(s) {
+		                t(RZM.PATH + "scripts/libs/shaders/lut.frag", function(e) {
+		                    const i = new THREE.ShaderPass({
+		                        vertexShader: s,
+		                        fragmentShader: e,
+		                        uniforms: {
+		                            tDiffuse: {
+		                                type: "t",
+		                                value: new THREE.Texture
+		                            },
+		                            tLookup: {
+		                                type: "t",
+		                                value: new THREE.Texture
+		                            }
+		                        }
+		                    });
+		                    T.addPass(i);
+		                    const n = (new THREE.TextureLoader).load(RZM.PATH + "scripts/libs/images/bluefilm3.png");
+		                    n.generateMipmaps = false;
+							n.minFilter = THREE.LinearFilter;
+							i.uniforms.tLookup.value = n;
+							T.passes[T.passes.length - 1].renderToScreen = true;
+		                })
+		            });
+					M = new RZM.SrcMapData;
+					g = new RZM.SrcMap(R, M.datas, E);
+					M.loadNext(r);
+					c();
+			        var e = new WindowResizeHelper(c);
+			        e.enable()
+			    };
+
+				function s() {
+					E = document.createElement("div");
+					document.getElementById("main-visual").appendChild(E);
+					E.setAttribute("id", "console_dom");
+					$("#console_dom").css({
+						color: "#aaafbf",
+						position: "absolute",
+						top: "80px",
+						left: "80px",
+						"font-family": "Helvetica Neue LT W02_71488916",
+						"font-size": "14px"
+					});
+					void 0 != g && g.setConsoleDom(E)
 				}
+				function i(t) {
 
-				RZM.SrcMap.prototype.update = function() {
-		           if (ct.c % 30 < 15 && this.datas.length > 0) {
-					   var t
-		               for (var i = 0; i < this.lines.length; i++){
-						   this.lines[i].parent.remove(this.lines[i]);
-						   this.lines[i].geometry.dispose();
-						   this.lines[i].material.dispose();
-					   }
-		               this.lines = [];
-		               for (var i = 0; i < this.word_sprites.length; i++){
-						  this.word_sprites[i].parent && this.word_sprites[i].parent.remove(this.word_sprites[i]);
-					   }
-		               if(this.next_step_index > this.datas.length - 1) this.next_step_index = -1;
-		               var s = this.next_step_index == -1 ? parseInt(ct.rnd(this.datas.length)) : this.next_step_index;
-		               this.step_hist.push(s);
-					   this.drawHist(this.top_canvas, this.top_texture, this.step_hist);
-		               var _temp_data = this.datas[s];
-		               ! this.word_counting[_temp_data.word] ? this.word_counting[_temp_data.word] = 1 : this.word_counting[_temp_data.word]++;
-					   this.drawChart(this.chart_canvas, this.chart_texture, this.word_counting);
-					   var n = _temp_data.nears;
-		               _temp_data.ploted || (_temp_data.ploted = !0, this.plot(_temp_data));
-		               for (var e = 0; e < this.spheres.length; e++) this.spheres[e].visible = n.length > e;
-		               for (var a = [], e = 0; e < n.length; e++) {
-		                   if (void 0 == n[e].target) {
-		                       n[e].target = -1;
-		                       for (var o = 0; o < this.datas.length; o++)
-		                           if (this.datas[o].word == n[e].word) {
-		                               n[e].target = o;
-		                               break
-		                           }
-		                   }
-		                   var r = n[e].target;
-		                   if (-1 != r) {
-		                       e > 0 && a.push(r);
-		                       var d = this.datas[r];
-		                       if (this.drawText(this.word_canvas[e], d.word), this.word_sprites[e].material.map.needsUpdate = !0, this.word_sprites[e].position.set(d.pos.x, d.pos.y, d.pos.z), this.scene.add(this.word_sprites[e]), this.spheres.length < e + 1) {
-		                           var c = new THREE.Mesh(this.sphere_asset.geom, 0 == e ? this.sphere_asset.red_material : this.sphere_asset.material);
-		                           c.position.x = d.pos.x, c.position.y = d.pos.y, c.position.z = d.pos.z, this.scene.add(c), this.spheres.push(c)
-		                       } else {
-		                           var c = this.spheres[e];
-		                           c.position.x = d.pos.x, c.position.y = d.pos.y, c.position.z = d.pos.z
-		                       }
-		                       t = this.getLine({
-		                           x: _temp_data.pos.x,
-		                           y: 0,
-		                           z: _temp_data.pos.z
-		                       }, {
-		                           x: d.pos.x,
-		                           y: 0,
-		                           z: d.pos.z
-		                       }, this.color_map[e % this.color_map.length]), this.scene.add(t), this.lines.push(t), t = this.getLine({
-		                           x: d.pos.x,
-		                           y: 0,
-		                           z: d.pos.z
-		                       }, d.pos, this.color_map[e % this.color_map.length]), this.scene.add(t), this.lines.push(t), ct.bm(3), ct.col(255, 1), ct.line(this.toCanvasPosition(i.pos.x), this.toCanvasPosition(i.pos.z), this.toCanvasPosition(d.pos.x), this.toCanvasPosition(d.pos.z)), d.ploted || (d.ploted = !0, this.plot(d)), this.modifyHeight(r)
-		                   }
-		               }
-		               if (this.texture.needsUpdate = !0, a.length > 0) {
-		                   this.next_step_index = a[parseInt(ct.rnd(a.length))];
-		                   var d = this.datas[this.next_step_index];
-		                   ct.bm(3), ct.col(255, 2), ct.line(this.toCanvasPosition(i.pos.x), this.toCanvasPosition(i.pos.z), this.toCanvasPosition(d.pos.x), this.toCanvasPosition(d.pos.z))
-		               }
-		               this.checkLoop()
-		           }
-		       }
+			        t ? (E && (document.getElementById("main-visual").removeChild(E), E = null), n()) : (s(), a())
+			    }
 
-				//
-				renderer = new THREE.WebGLRenderer();
-				renderer.setPixelRatio( window.devicePixelRatio );
-				renderer.setSize( window.innerWidth, window.innerHeight );
-				container.appendChild( renderer.domElement );
-				//
-				//
-				window.addEventListener( 'resize', onWindowResize, false );
+			    function n() {
+			        a(), H = setInterval(o, 3e3)
+			    }
+
+			    function a() {
+			        H && clearInterval(H)
+			    }
+
+			    function o() {
+			        w.enabled = false;
+					ct.tween(f.position).to(y[parseInt(ct.rnd(y.length))], 1e3).easing(ct.SineInOut).onComplete(function() {
+			            w.enabled = true; // I think it should be false. It would be better no interaction in the pad neither.
+			        }.bind(this)).start()
+			    }
+
+			    function r(t, e) {
+			        g.checkData(t);
+					e && !g.fulled && setTimeout(function() {
+			            M.loadNext(r)
+			        }, 1e3)
+			    }
+
+			    function d() {
+			        TWEEN.update(), h = requestAnimationFrame(d), R.rotateY(.0012), g.update(), w.update(), T.render(), ct.c++
+			    }
+
+			    function c(t) {
+			        p(window.innerWidth, window.innerHeight)
+			    }
+
+			    function p(t, e) {
+			        z != t && (z = t, f.aspect = t / e, f.updateProjectionMatrix(), u.setSize(t, e), T.setSize(t, e), w.handleResize())
+			    }
+			    if (!Detector.webgl) return void Detector.addGetWebGLMessage();
+			    RzmSrcMap && (RzmSrcMap.resize = function(t, e) {
+			        p(t, e)
+			    }, RzmSrcMap.pause = function() {
+			        cancelAnimationFrame(h)
+			    }, RzmSrcMap.resume = function() {
+			        void 0 != h && cancelAnimationFrame(h), d()
+			    }, RzmSrcMap.isSp = function(t) {
+			        i(t)
+			    });
+			    var h, l, f, u, v, E, m, w, x = new THREE.Clock,
+		        T, R, g, M, H;
+			    e(), d();
+			    var z = 0
 			}();
-			function onWindowResize() {
-				camera.aspect = window.innerWidth / window.innerHeight;
-				camera.updateProjectionMatrix();
-				renderer.setSize( window.innerWidth, window.innerHeight );
-			}
-			//
-			function animate() {
-				requestAnimationFrame( animate );
-				render();
-			}
-			function render() {
-				var time = Date.now() * 0.001;
-				//points.rotation.x = time * 0.25;
-				//points.rotation.y = time * 0.5;
-				renderer.render( scene, camera );
-			}
 
 
 
 
 
 		</script>
+		<script src="index.js"></script>
 
 	</body>
 </html>

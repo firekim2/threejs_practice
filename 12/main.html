@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>three.js webgl - buffergeometry - particles</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body{
+				margin: 0;
+			}
+			#container{
+				width: 100%;
+				height: 100%;
+			}
+		</style>
+
+        <script src="https://threejsfundamentals.org/threejs/../3rdparty/dat.gui.min.js"></script>
+        <script src="scripts/libs/js/centi.js"></script>
+        <script src="scripts/libs/js/three.js"></script>
+        <script src="scripts/libs/shaders/shader.js"></script>
+	</head>
+	<body id="page-top">
+      <div id="container">
+        <div id="mainimage">
+          <div id="main-visual"></div>
+        </div>
+    </div>
+
+
+
+		<script>
+			class ColorGUIHelper {
+				constructor(object, prop) {
+					this.object = object;
+					this.prop = prop;
+				}
+				get value() {
+					return `#${this.object[this.prop].getHexString()}`;
+				}
+				set value(hexString) {
+					this.object[this.prop].set(hexString);
+				}
+			}
+
+			function makeXYZGUI(gui, vector3, name, onChangeFn) {
+				const folder = gui.addFolder(name);
+				folder.add(vector3, 'x', -3000, 3000).onChange(onChangeFn);
+				folder.add(vector3, 'z', -3000, 3000).onChange(onChangeFn);
+				folder.add(vector3, 'y', -3000, 3000).onChange(onChangeFn);
+				folder.open();
+			}
+
+            function request_file(path, callback) {
+                //opening shader
+                var request = new XMLHttpRequest;
+                request.open("GET", path);
+                request.onload = function() {
+                    callback && callback(this.responseText)
+                };
+                request.send(null)
+            };
+
+			//gui.addColor(new ColorGUIHelper(light, 'color'), 'value').name('color');
+		</script>
+
+
+		<script>
+			var SWK = SWK || {};
+            var ct = ct || new Centi;
+			SWK.PATH = "/";
+			SWK.Map = function(scene){
+				this.scene = scene;
+				//this.fulled = false;
+				this.NUM = {x: 201, y: 201};
+                this.center = []
+                this.points = new Array;
+                {
+					const geometry = new THREE.Geometry;
+					for (var i = 0; i < this.NUM.x; i++){
+                        this.points[i] = new Array;
+						for (var j = 0; j < this.NUM.y; j++){
+                            var _temp_position = new THREE.Vector3(i - 100, 0, j - 100);
+                            this.points[i][j] = {position: _temp_position, order: -1, velocity: 0, pre_vel: 0, is_moving: false};
+                            geometry.vertices.push(_temp_position);
+                        }
+					}
+					const loader = new THREE.TextureLoader();
+					const texture = loader.load(SWK.PATH + "images/index/circle.png");
+					const material = new THREE.PointsMaterial({
+						size: 4,
+						sizeAttenuation: false,
+						map: texture,
+						alphaTest: false,
+						depthTest: true,
+						transparent: true,
+						opacity : .3,
+						blending: THREE.AdditiveBlending
+					});
+					const points = new THREE.Points(geometry, material);
+					this.particles = window.particles = points;
+					this.scene.add(this.particles);
+				}
+
+				var temp_box_on = true;
+				if(temp_box_on){
+					//temporary_box
+					const geometry = new THREE.CubeGeometry(200, 50, 200);
+					const material = new THREE.MeshBasicMaterial({
+						color: 0xffffff
+					});
+					const cube = new THREE.Mesh(geometry, material);
+					cube.position.y = 25;
+					const helper = new THREE.EdgesHelper(cube, 0xffffff);
+					helper.material.linewidth = 1;
+					helper.material.opacity = .5;
+					helper.material.transparent = true;
+					this.scene.add(helper);
+					helper.geometry.translate(0, 25, 0);
+				}
+
+				{
+                    this.lines = new THREE.Object3D;
+                    var material = new THREE.LineBasicMaterial({
+	                       color: 0xffffff,
+                           opacity: 0.1,
+                           transparent: true,
+                           blending: THREE.AdditiveBlending,
+                           alphaTest: false,
+		                  depthTest: true
+                   });
+                    for (var i = 0; i < this.NUM.x; i++){
+                        const geometry_x = new THREE.Geometry;
+                        const geometry_y = new THREE.Geometry;
+                        for(var j = 0; j < this.NUM.y; j++){
+                            geometry_x.vertices.push(this.points[i][j].position);
+                            geometry_y.vertices.push(this.points[j][i].position);
+                            this.points[i][j].line_x = geometry_x;
+                            this.points[i][j].line_y = geometry_y;
+                        }
+                        const line_x = new THREE.Line(geometry_x, material);
+                        const line_y = new THREE.Line(geometry_y, material);
+                        this.lines.add(line_x);
+                        this.lines.add(line_y);
+                    }
+                    this.scene.add(this.lines);
+                }
+
+			}
+
+            SWK.Map.prototype.ripple = function(x, y, velocity){
+                var center = new THREE.Vector2(x, y);
+                this.is_valid(x, y) && !this.points[x][y].is_moving && (this.points[x][y].velocity += velocity, this.points[x][y].is_moving = true);
+                
+                /*
+                for(var i = x - 10 > 0 ? x - 10 : 0; i < x + 10 > this.NUM.x ? this.NUM.x : x + 10; i++){
+                    for(var j = y - 10 > 0 ? y - 10 : 0; j < y + 10 > this.NUM.y ? this.NUM.y : y + 10; j++){
+                        console.log(i, j)
+                    }
+                }
+                */
+            }
+
+            SWK.Map.prototype.plot = function(x, y, new_height){
+                if(this.is_valid(x, y)){
+                    this.points[x][y].position.y = new_height;
+                    this.particles.geometry.verticesNeedUpdate = true;
+                    this.points[x][y].line_x.verticesNeedUpdate = true;
+                    this.points[x][y].line_y.verticesNeedUpdate = true;
+                }
+            }
+
+            SWK.Map.prototype.is_valid = function(x, y){
+                if(x >= 0 && y >= 0 && x < this.NUM.x && y < this.NUM.y){
+                    return true;
+                }
+                return false;
+            }
+
+            SWK.Map.prototype.next_step = function(x, y){
+                var point = this.points[x][y];
+                var vel = point.velocity;
+                var pos = point.position.y;
+                point.velocity -= pos * 0.05;
+                point.velocity *= 0.85;
+                pos += vel;
+                if(point.is_moving) {
+
+                }
+                if(Math.abs(pos) < 0.05 && Math.abs(vel) < 0.1) pos = 0, point.velocity = 0, point.is_moving = false, point.order = -1;
+                this.plot(x, y, pos);
+                point.pre_vel = vel;
+            }
+
+            SWK.Map.prototype.distance = function(center, x, y){
+                var target = new THREE.Vector2(x, y);
+                var distance = center.distanceTo( target );
+                return distance;
+            }
+
+            SWK.Map.prototype.update = function() {
+
+                for (var i = 0 ; i < this.NUM.x ; i ++){
+                    for (var j = 0; j < this.NUM.y ; j++){
+                        this.next_step(i, j);
+                    }
+                }
+            }
+
+            ! function init(){
+                var renderer, camera, scene, controls;
+
+                scene = new THREE.Scene;
+                !function() {
+                    camera = new THREE.PerspectiveCamera(67, window.innerWidth / window.innerHeight, .01, 1e3);
+                    camera.position.z = 0;
+                    camera.position.y = 1300;
+                    ct.tween(camera.position).to({
+                        x: 0,
+                        y: 100,
+                        z: 190
+                    }, 5e3).easing(ct.SineInOut).onComplete(function() {
+                        controls.enabled = true;
+                    }.bind(this)).start();
+                }(),
+
+                function() {
+                    renderer = new THREE.WebGLRenderer({
+                        antialias: !0,
+                        alpha: !0
+                    });
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                    renderer.setClearColor(0, 1);
+                    renderer.autoClear = true;
+                    renderer.sortObjects = false;
+                    controls =  window.controls = new THREE.TrackballControls(camera, renderer.domElement);
+                    controls.staticMoving = true;
+                    controls.enabled = false;
+                }(),
+
+                function() {
+                    var div = document.createElement("div");
+                    div.appendChild(renderer.domElement);
+                    document.getElementById("main-visual").appendChild(div);
+                }();
+
+                {
+                    var shader = new THREE.EffectComposer(renderer);
+                    shader.addPass(new THREE.RenderPass(scene, camera));
+                    request_file(SWK.PATH + "scripts/libs/shaders/pass.vert", function(s) {
+                        request_file(SWK.PATH + "scripts/libs/shaders/lut.frag", function(e) {
+                            const shader_pass = new THREE.ShaderPass({
+                                vertexShader: s,
+                                fragmentShader: e,
+                                uniforms: {
+                                    tDiffuse: {
+                                        type: "t",
+                                        value: new THREE.Texture
+                                    },
+                                    tLookup: {
+                                        type: "t",
+                                        value: new THREE.Texture
+                                    }
+                                }
+                            });
+                            shader.addPass(shader_pass);
+                            const texture = (new THREE.TextureLoader).load(SWK.PATH + "scripts/libs/images/bluefilm3.png");
+                            texture.generateMipmaps = false;
+                            texture.minFilter = THREE.LinearFilter;
+                            shader_pass.uniforms.tLookup.value = texture;
+                            shader.passes[shader.passes.length - 1].renderToScreen = true;
+                        })
+                    });
+                }
+
+                var swk = window.x = new SWK.Map(scene);
+                var animation;
+
+                !function play() {
+			        TWEEN.update();
+                    controls.update();
+                    shader.render();
+                    swk.update();
+                    animation = requestAnimationFrame(play);
+			    }();
+
+            }();
+
+		</script>
+
+	</body>
+</html>

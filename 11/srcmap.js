@@ -2,12 +2,10 @@ function shuffle(t) {
     for (var e = t.length, s, i; e;) i = Math.floor(Math.random() * e--), s = t[e], t[e] = t[i], t[i] = s;
     return t
 }
-
 var ct = ct || new Centi,
     RZM = RZM || {};
 RZM.PATH = "/",
-
-/*    function() {
+    function() {
         var t = {
             word: "",
             pos: {
@@ -23,9 +21,7 @@ RZM.PATH = "/",
             ploted_index: -1,
             modified_y: !1
         }
-    }(),*/
-
-    RZM.SrcMap = function(t, e, s) {
+    }(), RZM.SrcMap = function(t, e, s) {
         this.console_dom = s, this.datas = e, this.scene = t, this.word_counting = {}, this.income_cnt = 0, this.ploted_cnt = 0, this.fulled = !1, this.NUM = 32768;
         var i = new THREE.Geometry;
         for (w = 0; w < this.NUM; w++) {
@@ -70,11 +66,13 @@ RZM.PATH = "/",
             var h = new THREE.EdgesHelper(p, 16777215);
             h.material.linewidth = 1, h.material.opacity = .5, h.material.transparent = !0, this.scene.add(h), h.geometry.translate(0, 25, 0)
         }
+        console.dir(
+            this.scene
+        )
         var l, f, u = 512;
         ! function() {
             l = document.createElement("canvas"), l.width = l.height = u, f = l.getContext("2d")
         }(), this.canvas_size = u, this.context = f, this.canvas = l;
-
         var v = new THREE.Texture(this.canvas);
         v.needsUpdate = !0;
         var E = new THREE.MeshBasicMaterial({
@@ -90,7 +88,6 @@ RZM.PATH = "/",
             }),
             m = new THREE.PlaneGeometry(200, 200, 1, 1),
             a = new THREE.Mesh(m, E);
-
         if (a.rotation.x = -ct.PI / 2, this.scene.add(a), ct.ctx = this.context, ct.canvas = this.canvas, this.texture = v, 0) {
             var l, f, u = 1024;
             ! function() {
@@ -113,9 +110,6 @@ RZM.PATH = "/",
                 a = new THREE.Mesh(m, E);
             a.position.y = 50, a.rotation.x = -ct.PI / 2, this.scene.add(a), this.top_texture = v
         }
-
-
-
         var l, f, u = 1024;
         ! function() {
             l = document.createElement("canvas"), l.width = l.height = u, f = l.getContext("2d")
@@ -164,11 +158,8 @@ RZM.PATH = "/",
             })
         }, this.color_map = [16734221, 16736769, 16742913, 16749826, 16756739, 16763396, 16769030, 16773129, 15792908, 14351885, 12713232, 10943765, 9239839, 7798063, 6552905, 5176682, 3800464, 2555318, 1441241, 1375734];
         var T = new THREE.GridHelper(100, 20);
-        T.material.color = new THREE.Color(2433040), T.material.blending = THREE.AdditiveBlending, this.scene.add(T), this.scene.add(this.particles)
-
-    },
-
-    RZM.SrcMap.prototype.setConsoleDom = function(t) {
+        T.material.color = new THREE.Color(2433040), T.material.blenging = THREE.AdditiveBlending, this.scene.add(T), this.scene.add(r)
+    }, RZM.SrcMap.prototype.setConsoleDom = function(t) {
         this.console_dom = t
     }, RZM.SrcMap.prototype.toCanvasPosition = function(t) {
         return ct.zmap(t, -100, 100, 0, this.canvas_size)
@@ -179,9 +170,7 @@ RZM.PATH = "/",
         e.width = e.height = s;
         var n = e.getContext("2d");
         return n.font = i + "pt Helvetica, Arial", n.fillStyle = "#ffffff", n.fillText(t, 0, 12), e
-    },
-
-    RZM.SrcMap.prototype.drawText = function(t, e) {
+    }, RZM.SrcMap.prototype.drawText = function(t, e) {
         var s = 12,
             i = t.getContext("2d");
         i.clearRect(0, 0, 128, 128), i.font = s + "pt Helvetica, Arial", i.fillStyle = "#ffffff", i.textAlign = "center";
@@ -191,9 +180,7 @@ RZM.PATH = "/",
             for (var o = 0; o < a.length; o++) i.fillText(a[o], 64, 59 + 16 * o - 16 * (a.length - 1), 128)
         } else i.fillText(e, 64, 59, 128);
         return t
-    },
-
-     RZM.SrcMap.prototype.drawHist = function(t, e, s) {
+    }, RZM.SrcMap.prototype.drawHist = function(t, e, s) {
         if (0 != s.length && void 0 != this.console_dom) {
             for (var i = "", n = 0, a = s.length - 1; a >= 0; a--) {
                 var o = this.datas[s[a]].word;
@@ -214,18 +201,15 @@ RZM.PATH = "/",
             })
         }
         r.sort(function(t, e) {
-            return -t.val + e.val
+            return t.val < e.val ? -1 : t.val > e.val ? 1 : 0
         });
-        for (var c = 0; c < r.length; c++) {
+        for (var c = r.length - 1; c >= 0; c--) {
             var p = "[ " + r[c].val + " ] " + r[c].word;
-            if (a.fillText(p, 2, 25 + n * c), d++, a.fillStyle = "#e5e5e5", c * n > 1024) break
+            if (a.fillText(p, 2, 25 + n * d), d++, a.fillStyle = "#e5e5e5", d * n > 1024) break
         }
         e.needsUpdate = !0
-    },
-
-    RZM.SrcMap.prototype.modifyHeight = function(t) {
-
-        if (this.fulled && t >= 0 && t < this.datas.length) {
+    }, RZM.SrcMap.prototype.modifyHeight = function(t) {
+        if (this.fulled && !(0 > t || t >= this.datas.length)) {
             var e = this.datas[t];
             if (!e.modified_y) {
                 for (var s = ct.vec2(e.pos.x, e.pos.z), i = ct.vec2(0, 0), n = 0; n < this.datas.length; n++)
@@ -241,9 +225,7 @@ RZM.PATH = "/",
                 r.vertices[e.ploted_index].x = e.pos.x, r.vertices[e.ploted_index].y = e.pos.y, r.vertices[e.ploted_index].z = e.pos.z, r.verticesNeedUpdate = !0
             }
         }
-    },
-
-    RZM.SrcMap.prototype.checkLoop = function() {
+    }, RZM.SrcMap.prototype.checkLoop = function() {
         if (0 != this.step_hist.length)
             for (var t = this.step_hist.length - 1; t >= 0; t--) {
                 for (var e = this.step_hist[t], s = 0, i = 0; i < this.step_hist.length; i++) t != i && e == this.step_hist[i] && s++;
@@ -252,11 +234,8 @@ RZM.PATH = "/",
                     break
                 }
             }
-    },
-
-     RZM.SrcMap.prototype.update = function() {
-         
-        if (ct.c % 30 < 20 && this.datas.length > 0) {
+    }, RZM.SrcMap.prototype.update = function() {
+        if (ct.c % 30 < 15 && this.datas.length > 0) {
             for (var t, e = 0; e < this.lines.length; e++) this.lines[e].parent.remove(this.lines[e]), this.lines[e].geometry.dispose(), this.lines[e].material.dispose();
             this.lines = [];
             for (var e = 0; e < this.word_sprites.length; e++) this.word_sprites[e].parent && this.word_sprites[e].parent.remove(this.word_sprites[e]);
@@ -281,9 +260,11 @@ RZM.PATH = "/",
                 if (-1 != r) {
                     e > 0 && a.push(r);
                     var d = this.datas[r];
+
                     if (this.drawText(this.word_canvas[e], d.word), this.word_sprites[e].material.map.needsUpdate = !0, this.word_sprites[e].position.set(d.pos.x, d.pos.y, d.pos.z), this.scene.add(this.word_sprites[e]), this.spheres.length < e + 1) {
                         var c = new THREE.Mesh(this.sphere_asset.geom, 0 == e ? this.sphere_asset.red_material : this.sphere_asset.material);
                         c.position.x = d.pos.x, c.position.y = d.pos.y, c.position.z = d.pos.z, this.scene.add(c), this.spheres.push(c)
+
                     } else {
                         var c = this.spheres[e];
                         c.position.x = d.pos.x, c.position.y = d.pos.y, c.position.z = d.pos.z
@@ -325,8 +306,9 @@ RZM.PATH = "/",
             t.ploted = !0, t.ploted_index = this.ploted_cnt, e.vertices[this.ploted_cnt].x = t.pos.x, e.vertices[this.ploted_cnt].y = t.pos.y, e.vertices[this.ploted_cnt].z = t.pos.z, e.verticesNeedUpdate = !0, this.ploted_cnt++
         }
     }, RZM.SrcMapData = function() {
+
         this.NUM = 101, this.PREFIX = RZM.PATH + "scripts/libs/rzm_src/", this.EXT = ".json", this.loaded_cnt = 0, this.random_index_arr = [], this.random_index_arr = function(t) {
-            e = [20]
+            e = [20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20]
             return shuffle(e)
         }(this.NUM), this.datas = []
     }, RZM.SrcMapData.prototype.loadNext = function(t) {
@@ -356,7 +338,7 @@ var ct = ct || new Centi,
     function e() {
         l = new THREE.Scene, R = new THREE.Object3D, l.add(R),
             function() {
-                f = new THREE.PerspectiveCamera(67, window.innerWidth / window.innerHeight, .01, 1e3), f.position.z = 0, f.position.y = 1300, ct.tween(f.position).to({
+                f  = new THREE.PerspectiveCamera(67, window.innerWidth / window.innerHeight, .01, 1e3), f.position.z = 0, f.position.y = 1300, ct.tween(f.position).to({
                     x: 0,
                     y: 100,
                     z: 190
@@ -368,10 +350,17 @@ var ct = ct || new Centi,
                 u = new THREE.WebGLRenderer({
                     antialias: !0,
                     alpha: !0
-                }), u.setSize(window.innerWidth, window.innerHeight), u.setClearColor(0, 1), u.autoClear = !0, u.sortObjects = !1, w = new THREE.TrackballControls(f, u.domElement), w.staticMoving = !0, w.enabled = !1
+                }), u.setSize(window.innerWidth, window.innerHeight), u.setClearColor(0, 1), u.autoClear = !0, u.sortObjects = !1, w = window.controls = new THREE.TrackballControls(f, u.domElement), w.staticMoving = !0, w.enabled = !1
             }(),
             function() {
-                v = document.createElement("div"), E = document.createElement("div"), v.appendChild(u.domElement), document.getElementById("main-visual").appendChild(v), s()
+                v = document.createElement("div"), E = document.createElement("div"), v.appendChild(u.domElement);
+                document.getElementById("main-visual").appendChild(v), s()
+                u.domElement.addEventListener("wheel", () => {
+                    console.log("scroll")
+                }) //why;;;
+                v.addEventListener("click", () => {
+                    console.log("click")
+                })
             }(), T = new THREE.EffectComposer(u), T.addPass(new THREE.RenderPass(l, f)), t(RZM.PATH + "scripts/libs/shaders/pass.vert", function(e) {
                 var s = e;
                 t(RZM.PATH + "scripts/libs/shaders/lut.frag", function(t) {
@@ -415,6 +404,7 @@ var ct = ct || new Centi,
     }
 
     function n() {
+        //mobile mode only
         a(), H = setInterval(o, 3e3)
     }
 
@@ -423,8 +413,10 @@ var ct = ct || new Centi,
     }
 
     function o() {
-        w.enabled = !1, ct.tween(f.position).to(y[parseInt(ct.rnd(y.length))], 1e3).easing(ct.SineInOut).onComplete(function() {
-            w.enabled = !0
+        //mobile mode only
+        w.enabled = false;
+        ct.tween(f.position).to(y[parseInt(ct.rnd(y.length))], 1e3).easing(ct.SineInOut).onComplete(function() {
+            w.enabled = true;
         }.bind(this)).start()
     }
 
@@ -461,8 +453,8 @@ var ct = ct || new Centi,
             phi: ct.rnd(-10, 10),
             theta: ct.rnd(-10, 10),
             rands: [ct.rnd(1e3), ct.rnd(1e3), ct.rnd(1e3)],
-            zoom_factor: 1,
-            max_zoom_factor: 2.2
+
+
         },
         T, R, g, M, H, y = [{
             x: 0,
