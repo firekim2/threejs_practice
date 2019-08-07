@@ -95,11 +95,12 @@
 					}
 
 					var calc_diff = function(ripples){
+						this.plot(0);
 						ripples.forEach((ripple) => {
 							ripple.distances[this.id] || (ripple.distances[this.id] = ripple.map.distance(this.position.x, this.position.z, ripple.position.x, ripple.position.y));
 							let distance = ripple.distances[this.id] - ripple.curr_radius;
 							if(distance < 0 && distance > -2 * ripple.curr_radius){
-								this.plot(cubicInOut(-Math.abs(ripple.block_move_range + distance) + ripple.block_move_range, 0, 1, ripple.block_move_range) * ripple.scale);
+								this.plot(this.position.y + cubicInOut(-Math.abs(ripple.block_move_range + distance) + ripple.block_move_range, 0, 1, ripple.block_move_range) * ripple.scale);
 							}
 						})
 					}
@@ -234,16 +235,17 @@
             }
 
 			var ripples = window.ripples = [];
-			var ripple_speed = 50;
+
 
 			SWK.Ripple = function(x, y, map) {
 				this.position = {x: x - 100, y: y- 100};
-				this.scale = 2;
+				this.scale = 5;
+				this.ripple_speed = 100;
 				this.clock = new THREE.Clock()
         		this.curr_radius = 0;
 				this.distances = [];
 				this.map = map;
-				this.block_move_range = 20;
+				this.block_move_range = 40;
 				ripples.push(this);
         		this.end_radius = Math.max(map.distance(this.x, this.y, 0, 0), map.distance(x, y, 0, map.NUM.y), map.distance(x, y, map.NUM.x, 0), map.distance(x, y, map.NUM.x, map.NUM.y)) + 2 * this.block_move_range;
 			}
@@ -255,7 +257,7 @@
 		    }
 
 		    SWK.Ripple.prototype.updateRadius = function() {
-		        this.curr_radius = (this.clock.getElapsedTime()) * ripple_speed;
+		        this.curr_radius = (this.clock.getElapsedTime()) * this.ripple_speed;
 		    }
 
 
