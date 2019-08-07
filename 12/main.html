@@ -60,6 +60,17 @@
                 request.send(null)
             };
 
+			function cubicInOut(t, b, c, d) {
+			    if (t <= 0) return b;
+			    else if (t >= d) return b + c;
+			    else {
+			        t /= d / 2;
+			        if (t < 1) return c / 2 * t * t * t + b;
+			        t -= 2;
+			        return c / 2 * (t * t * t + 2) + b;
+			    }
+			}
+
 			//gui.addColor(new ColorGUIHelper(light, 'color'), 'value').name('color');
 		</script>
 
@@ -76,11 +87,28 @@
                 this.points = new Array;
                 {
 					const geometry = new THREE.Geometry;
+					var plot = function(height){
+	                    this.position.y = height;
+						this.parents.particles.geometry.verticesNeedUpdate = true;
+	                    this.line_x.verticesNeedUpdate = true;
+	                    this.line_y.verticesNeedUpdate = true;
+					}
+
+					var calc_diff = function(ripples){
+						ripples.forEach((ripple) => {
+							ripple.distances[this.id] || (ripple.distances[this.id] = ripple.map.distance(this.position.x, this.position.z, ripple.position.x, ripple.position.y));
+							let distance = ripple.distances[this.id] - ripple.curr_radius;
+							if(distance < 0 && distance > -2 * ripple.curr_radius){
+								this.plot(cubicInOut(-Math.abs(ripple.block_move_range + distance) + ripple.block_move_range, 0, 1, ripple.block_move_range) * ripple.scale);
+							}
+						})
+					}
+
 					for (var i = 0; i < this.NUM.x; i++){
                         this.points[i] = new Array;
 						for (var j = 0; j < this.NUM.y; j++){
                             var _temp_position = new THREE.Vector3(i - 100, 0, j - 100);
-                            this.points[i][j] = {position: _temp_position, order: -1, velocity: 0, pre_vel: 0, is_moving: false};
+                            this.points[i][j] = {position: _temp_position, id: i * this.NUM.y + j, velocity: 0, plot: plot, calc_diff: calc_diff, parents: this};
                             geometry.vertices.push(_temp_position);
                         }
 					}
@@ -147,19 +175,12 @@
 
 			}
 
-            SWK.Map.prototype.ripple = function(x, y, velocity){
-                var center = new THREE.Vector2(x, y);
-                this.is_valid(x, y) && !this.points[x][y].is_moving && (this.points[x][y].velocity += velocity, this.points[x][y].is_moving = true);
-                
-                /*
-                for(var i = x - 10 > 0 ? x - 10 : 0; i < x + 10 > this.NUM.x ? this.NUM.x : x + 10; i++){
-                    for(var j = y - 10 > 0 ? y - 10 : 0; j < y + 10 > this.NUM.y ? this.NUM.y : y + 10; j++){
-                        console.log(i, j)
-                    }
-                }
-                */
-            }
+            SWK.Map.prototype.ripple = function(x, y){
+                var rip = new SWK.Ripple(x, y, this);
 
+				console.dir(rip);
+            };
+			/*
             SWK.Map.prototype.plot = function(x, y, new_height){
                 if(this.is_valid(x, y)){
                     this.points[x][y].position.y = new_height;
@@ -175,7 +196,8 @@
                 }
                 return false;
             }
-
+			*/
+			/*
             SWK.Map.prototype.next_step = function(x, y){
                 var point = this.points[x][y];
                 var vel = point.velocity;
@@ -190,21 +212,52 @@
                 this.plot(x, y, pos);
                 point.pre_vel = vel;
             }
+			*/
 
-            SWK.Map.prototype.distance = function(center, x, y){
+			SWK.Map.prototype.draw = function () {
+				ripples.forEach((ripple, i) => {
+					ripple.updateRadius();
+					ripple.checkKill();
+				});
+				for (var i = 0 ; i < this.NUM.x ; i ++){
+					for (var j = 0; j < this.NUM.y ; j++){
+						this.points[i][j].calc_diff(ripples);
+					}
+				}
+			}
+
+            SWK.Map.prototype.distance = function(center_x, center_y, x, y){
+				var center = new THREE.Vector2(center_x, center_y);
                 var target = new THREE.Vector2(x, y);
                 var distance = center.distanceTo( target );
                 return distance;
             }
 
-            SWK.Map.prototype.update = function() {
+			var ripples = window.ripples = [];
+			var ripple_speed = 50;
 
-                for (var i = 0 ; i < this.NUM.x ; i ++){
-                    for (var j = 0; j < this.NUM.y ; j++){
-                        this.next_step(i, j);
-                    }
-                }
-            }
+			SWK.Ripple = function(x, y, map) {
+				this.position = {x: x - 100, y: y- 100};
+				this.scale = 2;
+				this.clock = new THREE.Clock()
+        		this.curr_radius = 0;
+				this.distances = [];
+				this.map = map;
+				this.block_move_range = 20;
+				ripples.push(this);
+        		this.end_radius = Math.max(map.distance(this.x, this.y, 0, 0), map.distance(x, y, 0, map.NUM.y), map.distance(x, y, map.NUM.x, 0), map.distance(x, y, map.NUM.x, map.NUM.y)) + 2 * this.block_move_range;
+			}
+
+			SWK.Ripple.prototype.checkKill = function() {
+		        if (this.curr_radius > this.end_radius) {
+		            ripples.splice(ripples.indexOf(this), 1);
+		        }
+		    }
+
+		    SWK.Ripple.prototype.updateRadius = function() {
+		        this.curr_radius = (this.clock.getElapsedTime()) * ripple_speed;
+		    }
+
 
             ! function init(){
                 var renderer, camera, scene, controls;
@@ -279,7 +332,7 @@
 			        TWEEN.update();
                     controls.update();
                     shader.render();
-                    swk.update();
+                    swk.draw();
                     animation = requestAnimationFrame(play);
 			    }();
 
